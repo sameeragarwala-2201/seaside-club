@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#2b9bd9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Arya's Marina Club</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Nunito:wght@600;800&display=swap">
+<style>
+/* Layout: full-screen letterboxed canvas (960x640 world) with HTML HUD on top; one bright seaside look, no dark variant */
+:root{
+  --sky:#bfe9ff; --sea:#2b9bd9; --sea-deep:#1f7fb8; --sand:#f7e1a6; --wood:#d99a5b; --wood-dark:#b57a3f;
+  --ink:#2a2f3b; --paper:#fff8e8; --accent:#ff6f4e; --gold:#ffc83d; --leaf:#4fbf6b; --muted:#6c7484;
+  --display:"Fredoka","Nunito","Trebuchet MS",sans-serif; --body:"Nunito","Trebuchet MS",sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{margin:0;background:var(--sky);color:var(--ink);font-family:var(--body);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+#cv{display:block;width:100%;height:100%;position:fixed;inset:0}
+#hud{position:fixed;left:0;right:0;top:0;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;pointer-events:none;flex-wrap:wrap}
+#hud > *{pointer-events:auto}
+.pill{background:var(--paper);border-radius:999px;padding:8px 14px;box-shadow:0 3px 0 rgba(0,0,0,.12);font-weight:800;display:flex;align-items:center;gap:8px;font-size:16px;border:2px solid #fff;font-variant-numeric:tabular-nums}
+#coins{font-family:var(--display);font-size:22px}
+#levelwrap{display:flex;flex-direction:column;gap:4px;min-width:0}
+#lvl{font-family:var(--display);font-weight:700;font-size:16px;white-space:nowrap}
+#bar{height:8px;width:150px;background:#eadfc3;border-radius:99px;overflow:hidden}
+#barfill{height:100%;width:0;background:var(--leaf);transition:width .3s}
+#daywrap{display:flex;flex-direction:column;gap:4px;min-width:0}
+#day{font-family:var(--display);font-weight:700;font-size:16px;white-space:nowrap}
+#daybar{height:8px;width:110px;background:#eadfc3;border-radius:99px;overflow:hidden}
+#dayfill{height:100%;width:0;background:var(--gold)}
+button{font-family:var(--display);font-weight:700;font-size:17px;border:0;border-radius:14px;padding:10px 16px;cursor:pointer;color:#fff;background:var(--accent);box-shadow:0 4px 0 #c94a2d;transition:transform .08s}
+button:active{transform:translateY(3px);box-shadow:0 1px 0 #c94a2d}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button.ghost{background:var(--paper);color:var(--ink);box-shadow:0 4px 0 #d8c99f}
+button.ghost:active{box-shadow:0 1px 0 #d8c99f}
+button:disabled{opacity:.45;cursor:default;transform:none}
+#hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--paper);border:2px solid #fff;border-radius:16px;padding:10px 18px;font-weight:800;font-size:17px;box-shadow:0 4px 0 rgba(0,0,0,.12);max-width:calc(100% - 32px);text-align:center;pointer-events:none;text-wrap:balance}
+#mission{position:fixed;left:16px;bottom:calc(74px + env(safe-area-inset-bottom,0px));background:#fff;border:2px solid #ffd166;border-radius:14px;padding:8px 12px;font-weight:800;font-size:14px;box-shadow:0 3px 0 rgba(0,0,0,.12);max-width:230px;pointer-events:none}
+#mission b{font-family:var(--display);display:block;font-size:13px;color:#c9961a;letter-spacing:.04em;text-transform:uppercase}
+#mission.done{border-color:var(--leaf);background:#eefbf1}
+#shop{position:fixed;top:0;right:0;bottom:0;width:min(380px,100%);background:var(--paper);box-shadow:-6px 0 24px rgba(0,0,0,.15);padding:calc(14px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px));overflow-y:auto;display:flex;flex-direction:column;gap:12px;transform:translateX(105%);transition:transform .25s}
+#shop.open{transform:none}
+#shop h2{font-family:var(--display);margin:0;font-size:26px}
+#shop h3{font-family:var(--display);margin:8px 0 0;font-size:18px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tabs{display:flex;gap:6px}
+.tabs button{padding:8px 12px;font-size:15px;flex:1}
+.tabs button[aria-selected=false]{background:#fff;color:var(--ink);box-shadow:0 4px 0 #e3d6b4}
+.item{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;background:#fff;border-radius:14px;padding:10px;border:2px solid #f0e4c6}
+.item .ic{font-size:30px;text-align:center}
+.item b{font-family:var(--display);font-size:17px;display:block}
+.item small{color:var(--muted);font-weight:600;font-size:13px}
+.item button{padding:8px 12px;font-size:15px;white-space:nowrap;min-width:0}
+.item button.done{background:var(--leaf);box-shadow:0 4px 0 #2f8a48}
+.item.locked{opacity:.55}
+.trophy{display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center;background:#fff;border-radius:14px;padding:8px 10px;border:2px solid #f0e4c6}
+.trophy.off{opacity:.4;filter:grayscale(1)}
+.trophy .ic{font-size:28px;text-align:center}
+.trophy b{font-family:var(--display);font-size:16px;display:block}
+.trophy small{color:var(--muted);font-weight:600;font-size:13px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:#fff;border-radius:12px;padding:8px 10px;border:2px solid #f0e4c6}
+.stat b{font-family:var(--display);font-size:22px;display:block}
+.stat small{color:var(--muted);font-weight:700;font-size:12px}
+label{font-weight:800;font-size:14px;display:flex;flex-direction:column;gap:6px}
+input[type=text]{font:inherit;font-weight:800;font-size:16px;padding:10px 12px;border-radius:12px;border:2px solid #e3d6b4;background:#fff;color:var(--ink);min-width:0}
+input[type=text]:focus-visible{outline:3px solid var(--gold)}
+.tiny{color:var(--muted);font-size:13px;font-weight:600;margin:0}
+#report{position:fixed;inset:0;background:rgba(20,40,70,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+#report .card{background:var(--paper);border-radius:22px;padding:22px;max-width:380px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.3);text-align:center;display:flex;flex-direction:column;gap:12px}
+#report h2{font-family:var(--display);margin:0;font-size:28px}
+#stars{font-size:40px;letter-spacing:4px}
+#report .stats{text-align:left}
+#report button{font-size:19px}
+@media (prefers-reduced-motion:reduce){#shop,#barfill,button{transition:none}}
+@media (max-width:760px){#cloudBadge{display:none}#bar{width:80px}#daybar{width:70px}.pill{padding:6px 10px;font-size:14px}#coins{font-size:18px}#lvl,#day{font-size:13px}#hint{font-size:15px}#mission{max-width:170px;font-size:13px}}
+</style>
+
+<canvas id="cv"></canvas>
+<div id="hud">
+  <div class="pill" id="levelwrap"><span id="lvl">Tiny Jetty</span><div id="bar"><div id="barfill"></div></div></div>
+  <div class="pill" id="daywrap"><span id="day">Day 1</span><div id="daybar"><div id="dayfill"></div></div></div>
+  <div class="pill" id="cloudBadge" style="font-size:12px;opacity:.85;position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom,0px));padding:5px 10px">💾 this device only</div>
+  <div class="pill" id="coins">🪙 <span id="coinsN">0</span> <span style="font-size:15px;opacity:.8">⭐ <span id="starsN">0</span></span></div>
+  <div style="display:flex;gap:8px">
+    <button class="ghost" id="pauseBtn" aria-label="Pause">⏸️</button>
+    <button class="ghost" id="musicBtn" aria-label="Music">🎵</button>
+    <button class="ghost" id="muteBtn" aria-label="Sound effects">🔊</button>
+    <button id="shopBtn">🛍️ Shop</button>
+  </div>
+</div>
+<div id="mission"><b>Today's mission</b><span id="missionTxt">…</span></div>
+<div id="hint">Walk to the dock and stand still to fish 🎣</div>
+
+<aside id="shop" aria-label="Shop">
+  <div class="row"><h2>Build your club</h2><button class="ghost" id="closeShop">✕</button></div>
+  <p class="tiny" id="shopCoins">You have 🪙 0</p>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tabUp" aria-selected="true">Upgrades</button>
+    <button role="tab" id="tabSt" aria-selected="false">Stages</button>
+    <button role="tab" id="tabTr" aria-selected="false">Trophies</button>
+  </div>
+  <div id="items"></div>
+  <div id="stages" hidden></div>
+  <div id="trophies" hidden></div>
+  <label>Club name <input type="text" id="nameIn" maxlength="24"></label>
+  <h3>Move your club to another device</h3>
+  <p class="tiny">Copy this save code, then paste it into the Shop on the other device and press Load.</p>
+  <div class="row"><input type="text" id="codeOut" readonly style="flex:1;font-size:12px"><button class="ghost" id="copyCode">Copy</button></div>
+  <div class="row"><input type="text" id="codeIn" placeholder="Paste a save code here" style="flex:1;font-size:12px"><button class="ghost" id="loadCode">Load</button></div>
+  <p class="tiny" id="codeMsg"></p>
+  <div class="row">
+    <p class="tiny" id="saveNote">Progress saves on this device.</p>
+    <button class="ghost" id="resetBtn">Start over</button>
+  </div>
+</aside>
+
+<div id="pauseScreen" hidden style="position:fixed;inset:0;background:rgba(20,40,70,.55);display:flex;align-items:center;justify-content:center;padding:16px">
+  <div class="card" style="background:var(--paper);border-radius:22px;padding:22px;max-width:320px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.3);text-align:center;display:flex;flex-direction:column;gap:14px">
+    <h2 style="font-family:var(--display);margin:0;font-size:28px">Paused ⏸️</h2>
+    <p class="tiny">The guests are waiting patiently. Take your time!</p>
+    <button id="resumeBtn" style="font-size:19px">▶️ Keep playing</button>
+  </div>
+</div>
+<div id="report" hidden>
+  <div class="card">
+    <h2 id="repTitle">Day 1 is over!</h2>
+    <div id="stars">⭐⭐⭐</div>
+    <div class="stats" id="repStats"></div>
+    <p class="tiny" id="repNote"></p>
+    <button id="nextDay">Open for Day 2 ☀️</button>
+  </div>
+</div>
+
+<script>
+(() => {
+const W = 960, H = 640, DAY_LEN = 150;
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+
+/* ---------- persistent state ---------- */
+const UP0 = () => ({ table: 2, basket: 0, grill: 0, juice: 0, waiter: 0, lights: 0, umbrella: 0, sandals: 0, rod: 0, ice: 0, vip: 0, vip2: 0, waiter2: 0, music: 0, menu: 0, tipjar: 0, ads: 0, boat: 0, boat2: 0, lounge: 0, viptable: 0, deco: {} });
+const DEFAULT = () => ({ coins: 0, earned: 0, name: "Arya's Marina Club", sound: true, music: true, day: 1, stars: 0, stage: 0,
+  stats: { served: 0, unhappy: 0, fish: 0, golden: 0, juice: 0, ice: 0, vip: 0, missions: 0, bestDay: 0, fancy: 0, fast: 0, svip: 0 },
+  ups: [UP0(), UP0(), UP0(), UP0(), UP0()] });
+let S = DEFAULT();
+function bindUp() { S.ups = (S.ups || []).map(u => ({ ...UP0(), ...u, deco: { ...(u && u.deco || {}) } })); while (S.ups.length < 5) S.ups.push(UP0()); S.stage = Math.min(4, Math.max(0, S.stage | 0)); S.up = S.ups[S.stage]; }
+function load() { try { const r = localStorage.getItem('marina-save'); if (r) { const o = JSON.parse(r); const d = DEFAULT(); S = { ...d, ...o, stats: { ...d.stats, ...(o.stats || {}) } }; if (!o.ups && o.up) S.ups = [{ ...UP0(), ...o.up }, UP0(), UP0(), UP0(), UP0()]; } } catch (e) {} bindUp(); }
+function plain() { const { up, ...rest } = S; return JSON.parse(JSON.stringify(rest)); }
+function save() { try { localStorage.setItem('marina-save', JSON.stringify(plain())); } catch (e) {} cloudDirty = true; }
+
+/* ---------- cloud save (per player, tied to their Claude account; falls back to this device only) ---------- */
+let cloud = { db: null, ref: null, ok: false, busy: false, last: 0 }, cloudDirty = false;
+const cloudBadge = () => { const n = $('saveNote'); if (n) n.textContent = cloud.ok ? 'Progress is saved to your Claude account and follows you to any device.' : 'Progress saves on this device only.'; const b = $('cloudBadge'); if (b) { b.textContent = cloud.ok ? '☁️ saved' : '💾 this device only'; b.title = cloud.ok ? 'Progress is saved to your account and follows you to other devices' : 'Progress is saved in this browser only'; } };
+async function cloudInit() {
+  try {
+    if (!window.claude || !claude.use) return;
+    const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
+    if (!db || !user) return;
+    const id = await user.id(); if (!id) return;
+    cloud.db = db; cloud.ref = db.doc('data/users/' + id + '/save');
+    const snap = await cloud.ref.get();
+    const remote = snap.exists ? snap.data() : null;
+    if (remote && remote.earned != null && (remote.earned > (S.earned || 0) || (remote.earned === S.earned && remote.stars > (S.stars || 0)))) {
+      // the account copy is further along than this device: adopt it
+      const d = DEFAULT(); S = { ...d, ...remote, stats: { ...d.stats, ...(remote.stats || {}) } }; bindUp(); lastLevel = levelOf();
+      try { localStorage.setItem('marina-save', JSON.stringify(plain())); } catch (e) {}
+      $('nameIn').value = S.name; renderShop(); float(480, 220, '☁️ Welcome back! Progress restored', '#1f7fb8');
+    }
+    cloud.ok = true; cloudBadge();
+    await cloudPush(true);
+    await applyGift(db);
+  } catch (e) { cloud.ok = false; cloudBadge(); }
+}
+async function cloudPush(force) {
+  if (!cloud.ok || cloud.busy) return; if (!force && !cloudDirty) return;
+  cloud.busy = true; cloudDirty = false;
+  try { await cloud.ref.set(plain()); cloud.last = Date.now(); } catch (e) { cloudDirty = true; if (e && e.code === 'invalid_argument') { cloud.ok = false; cloudBadge(); } }
+  cloud.busy = false;
+}
+// a one-time gift Claude can leave in the shared store (e.g. to hand back lost progress)
+async function applyGift(db) {
+  try {
+    const g = await db.doc('gifts/current').get(); if (!g.exists) return; const d = g.data();
+    if (!d.id || (S.giftsClaimed || []).includes(d.id)) return;
+    if ((S.earned || 0) > (d.maxEarned ?? 300)) return; // never overwrite a real save
+    S.coins = Math.max(S.coins, d.coins || 0); S.earned = Math.max(S.earned, d.earned || S.coins); S.stars = Math.max(S.stars, d.stars || 0); S.day = Math.max(S.day, d.day || 1);
+    if (d.ups) S.ups = S.ups.map((u, i) => ({ ...u, ...(d.ups[i] || {}), deco: { ...u.deco, ...((d.ups[i] || {}).deco || {}) } }));
+    if (d.stage != null && stageUnlocked(d.stage)) S.stage = d.stage;
+    S.giftsClaimed = [...(S.giftsClaimed || []), d.id]; bindUp(); lastLevel = levelOf(); renderShop(); save(); await cloudPush(true);
+    float(480, 200, d.message || '🎁 A gift for you!', '#c94a2d'); sfx.level();
+  } catch (e) {}
+}
+
+/* ---------- tuning ---------- */
+const cap = () => 2 + S.up.basket;
+const cookTime = () => Math.max(1, 5 - S.up.grill * 0.7);
+const grillSlots = () => 3 + S.up.grill;
+const fishTime = () => Math.max(0.7, 2.2 - S.up.rod * 0.35);
+const goldChance = () => Math.min(0.5, 0.06 + S.up.rod * 0.08);
+const speed = () => 240 + S.up.sandals * 35;
+const menuBoost = () => 1 + S.up.menu * 0.1;
+const tipAmt = () => (S.up.lights ? 3 : 0) + S.up.tipjar;
+const stageCost = c => Math.round(c * ST().mult / 10) * 10;
+const grow = (base, lvl, k = 1.6) => Math.round(base * Math.pow(k, lvl) / 10) * 10;
+const FRUIT_TIME = 0.6, JUICE_TIME = 3, ICE_TIME = 1.6;
+const PRICE = { cooked: 12, gcooked: 30, bigcooked: 60, juice: 8, ice: 10 };
+const SPEED_MULT = [8, 4, 2, 1]; // speed bonus units by quarter of the guest's patience used
+const speedUnit = () => Math.round(2 * ST().mult);
+const boatCatch = () => 1 + S.up.boat2;
+const isDish = k => k === 'cooked' || k === 'gcooked' || k === 'bigcooked';
+const lerp = (a, b, k) => a + (b - a) * k;
+const LEVELS = [[0, 'Tiny Jetty'], [150, 'Beach Shack'], [450, 'Seaside Cafe'], [1000, 'Marina Club'], [2000, 'Luxury Resort'], [4000, 'Legend of the Bay'], [8000, 'Queen of the Coast']];
+/* ---------- stages ---------- */
+const STAGES = [
+  { name: 'Sunny Marina', em: '🏖️', need: 0, mult: 1, patience: 1, catchName: 'fish', fruitName: 'oranges', c: { deck1: '#e0a86a', deck2: '#d99a5b', deck3: '#e3ad70', ground: '#f7e1a6', dots: '#eccd84', water1: '#3aa9e4', water2: '#1f7fb8', shore: '#fff3c8', dock1: '#b57a3f', dock2: '#d99a5b', dock3: '#c98a4e', sky: '#bfe9ff' }, deco: ['🌴', '🌴', '🌺', '🐚'], swim: '🐟', boat: '⛵', icons: { fish: '🐟', gfish: '🐠', cooked: '🍽️', gcooked: '🍣', fruit: '🍊', juice: '🧃', ice: '🍦', bigfish: '🐡', bigcooked: '🍱' } },
+  { name: 'Mountain Lake', em: '🏔️', need: 8, mult: 1.5, patience: 0.95, catchName: 'trout', fruitName: 'berries', c: { deck1: '#9aa5a8', deck2: '#8b969a', deck3: '#a7b2b5', ground: '#9fd38a', dots: '#86c272', water1: '#5fc9c0', water2: '#2a9a98', shore: '#d8f0d0', dock1: '#6f5a46', dock2: '#8d7560', dock3: '#7c6650', sky: '#d9f1ff' }, deco: ['🌲', '🌲', '🍄', '🪵'], swim: '🐟', boat: '🛶', icons: { fish: '🐟', gfish: '🐠', cooked: '🍲', gcooked: '🍣', fruit: '🫐', juice: '☕', ice: '🥧', bigfish: '🦈', bigcooked: '🥘' } },
+  { name: 'Jungle River', em: '🌴', need: 20, mult: 2, patience: 0.9, catchName: 'crabs', fruitName: 'coconuts', c: { deck1: '#c9b36b', deck2: '#b9a35c', deck3: '#d6c17c', ground: '#6fbf5a', dots: '#5aa848', water1: '#4fb08a', water2: '#2d7f62', shore: '#c9e8b0', dock1: '#8a6a2b', dock2: '#b58d3c', dock3: '#a07c33', sky: '#cff3d8' }, deco: ['🌴', '🦜', '🌺', '🐒'], swim: '🦀', boat: '🛶', icons: { fish: '🦀', gfish: '🐠', cooked: '🍛', gcooked: '🍣', fruit: '🥥', juice: '🥤', ice: '🍧', bigfish: '🦐', bigcooked: '🍤' } },
+  { name: 'City Harbour', em: '🌃', need: 40, mult: 3, patience: 0.85, catchName: 'squid', fruitName: 'tea leaves', c: { deck1: '#6b6f7c', deck2: '#5e6270', deck3: '#777b89', ground: '#9b9fab', dots: '#8a8e9a', water1: '#2f5b9a', water2: '#1d3a6b', shore: '#c3c8d6', dock1: '#3e4250', dock2: '#565a69', dock3: '#4a4e5c', sky: '#aab8d6' }, deco: ['🏙️', '🗼', '🚦', '🚤'], swim: '🦑', boat: '🚢', icons: { fish: '🦑', gfish: '🐠', cooked: '🍜', gcooked: '🍣', fruit: '🍃', juice: '🧋', ice: '🍩', bigfish: '🐙', bigcooked: '🥡' } },
+  { name: 'Ice Island', em: '🧊', need: 70, mult: 4, patience: 0.8, catchName: 'lobsters', fruitName: 'snowberries', c: { deck1: '#d9c2a8', deck2: '#cdb398', deck3: '#e5d0b8', ground: '#f4f8ff', dots: '#dde8f5', water1: '#9fd9f5', water2: '#5cb3e0', shore: '#ffffff', dock1: '#8a6a4a', dock2: '#a9876a', dock3: '#9a7858', sky: '#e8f4ff' }, deco: ['🐧', '🐧', '⛄', '❄️'], swim: '🦞', boat: '🚢', icons: { fish: '🦞', gfish: '🐠', cooked: '🥘', gcooked: '🍣', fruit: '🫐', juice: '🍵', ice: '🍰', bigfish: '🐟', bigcooked: '🫕' } },
+];
+const ST = () => STAGES[S.stage] || STAGES[0];
+const ICON = new Proxy({}, { get: (_, k) => ST().icons[k] || '❔' });
+const stageUnlocked = i => S.stars >= STAGES[i].need;
+
+/* ---------- world ---------- */
+const DOCK = { x: 140, y: 560 };
+const GRILL = { x: 850, y: 130, raw: [], cooked: [] };
+const JUICE = { x: 850, y: 300, fruit: 0, ready: 0, prog: 0 };
+const CRATE = { x: 850, y: 440 };
+const ICE = { x: 560, y: 462 };
+const JETTIES = [{ key: 'vip', x: 720, y: 590, from: 1040, side: 1, boat: null, timer: 25 }, { key: 'vip2', x: 440, y: 616, from: -80, side: -1, boat: null, timer: 30 }];
+const BPIER = { x: 900, y: 570 }, BUOY = { x: 680, y: 626 };
+const BOAT = { x: BPIER.x, y: 606, trip: null, board: 0 };
+const SPOTS = [[290, 150], [450, 150], [610, 150], [290, 270], [450, 270], [610, 270], [290, 390], [450, 390], [610, 390]];
+const tables = SPOTS.map(([x, y], i) => ({ x, y, guest: null, wait: 1 + i * 2.5 }));
+tables.push({ x: 760, y: 330, guest: null, wait: 1e9, vipOnly: true });
+const LOUNGE = { seats: [[640, 446], [690, 446], [615, 500], [740, 446]], queue: [] };
+const loungeSeats = () => S.up.lounge ? 2 * S.up.lounge : 0;
+const P = { x: 480, y: 330, items: [], fish: 0, fruit: 0, ice: 0, walk: 0, dir: 1 };
+const WAITER = { x: GRILL.x - 70, y: GRILL.y + 70, item: null, target: null, walk: 0, dir: 1 };
+const WAITER2 = { x: JUICE.x - 70, y: JUICE.y + 70, item: null, target: null, walk: 0, dir: 1 };
+const particles = [];
+let clickTarget = null, t = 0, dayT = 0, paused = false, vipBoats = 0; const leavers = [];
+const resetBoats = () => { JETTIES.forEach((J, i) => { J.boat = null; J.timer = 25 + i * 8; }); LOUNGE.queue.length = 0; leavers.length = 0; };
+const dayS = { coins: 0, served: 0, unhappy: 0 };
+let mission = null;
+
+/* ---------- input ---------- */
+const keys = new Set();
+addEventListener('keydown', e => { keys.add(e.key.toLowerCase()); if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(e.key.toLowerCase())) e.preventDefault(); initAudio(); });
+addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
+let scale = 1, offX = 0, offY = 0, dpr = 1;
+function resize() { dpr = devicePixelRatio || 1; const w = innerWidth, h = innerHeight; cv.width = w * dpr; cv.height = h * dpr; scale = Math.min(w / W, h / H); offX = (w - W * scale) / 2; offY = (h - H * scale) / 2; }
+addEventListener('resize', resize); resize();
+const toWorld = (cx, cy) => [(cx - offX) / scale, (cy - offY) / scale];
+const joy = { active: false, id: null, ox: 0, oy: 0, dx: 0, dy: 0 };
+cv.addEventListener('pointerdown', e => {
+  initAudio();
+  if ($('shop').classList.contains('open')) { closeShop(); return; }
+  if (e.pointerType === 'touch') { joy.active = true; joy.id = e.pointerId; joy.ox = e.clientX; joy.oy = e.clientY; joy.dx = joy.dy = 0; clickTarget = null; cv.setPointerCapture(e.pointerId); }
+  else { const [x, y] = toWorld(e.clientX, e.clientY); clickTarget = { x, y }; }
+});
+cv.addEventListener('pointermove', e => { if (joy.active && e.pointerId === joy.id) { const r = 60; let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy; const d = Math.hypot(dx, dy); if (d > r) { dx = dx / d * r; dy = dy / d * r; } joy.dx = dx / r; joy.dy = dy / r; } });
+const endJoy = e => { if (joy.active && e.pointerId === joy.id) { joy.active = false; joy.dx = joy.dy = 0; } };
+cv.addEventListener('pointerup', endJoy); cv.addEventListener('pointercancel', endJoy);
+
+/* ---------- audio ---------- */
+let AC = null;
+function initAudio() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } if (AC && AC.state === 'suspended') AC.resume(); musicStart(); }
+
+/* ---------- music: five original tunes, composed as patterns and played by the device synth (no audio files) ----------
+   Each bar is 16 steps. mel: digits = note of the scale (0-9 across two octaves), '.' = rest. bass: r=root f=fifth o=octave. */
+const TRACKS = [
+  { // Sunny Marina — bright ukulele bounce, C major
+    bpm: 116, root: 72, scale: [0, 2, 4, 7, 9], wave: 'triangle', dec: .22, chords: [0, 5, 7, 0],
+    mel: ['4.4.7.4.2.2.0...5.5.7.5.4...2...4.4.7.4.9.7.5.4.2.4.2.0.........', '7.7.9.7.5.4.2...5.4.5.7.........4.4.7.4.9.7.5.4.2.0.2.4.0.......'],
+    bass: 'r.r.o.r.f.f.o.r.', kick: 'x...x...x...x...', snare: '....x.......x...', hat: '..x...x...x...x.' },
+  { // Mountain Lake — calm music box, G major
+    bpm: 88, root: 67, scale: [0, 2, 4, 7, 9], wave: 'sine', dec: .7, bell: true, pad: true, chords: [0, 5, 9, 7],
+    mel: ['0...2...4...7...9...7...4.......2...4...7...4...2...0...........', '4...7...9...7...5...4...2.......0...2...4...2...0...............'],
+    bass: 'r.......f.......', kick: '................', snare: '................', hat: 'x.......x.......' },
+  { // Jungle River — marimba and bongos, E major
+    bpm: 126, root: 76, scale: [0, 2, 4, 7, 9], wave: 'sine', dec: .16, chords: [0, 0, 5, 7],
+    mel: ['0.0..2.4..4.2.0...4.5..7..5.4...0.0..2.4..7.5.4.2..0...........0', '7.7..9.7..5.4.2...4.2..0..2.4...5.5..7.9..7.5.4.2..0............'],
+    bass: 'r..r..r.o..r..f.', kick: 'x.....x...x.....', snare: '...x......x..x..', hat: 'x.x.x.x.x.x.x.x.' },
+  { // City Harbour — synth-pop, A minor
+    bpm: 132, root: 69, scale: [0, 3, 5, 7, 10], wave: 'square', dec: .18, chords: [0, 8, 3, 10],
+    mel: ['0.0.3.0.5.5.3.0.7.7.5.3.5.......0.0.3.0.5.5.7.5.3.0.3.5.3.0.....', '7.7.9.7.5.5.3.0.5.3.5.7.........0.0.3.0.5.5.7.5.3.0.............'],
+    bass: 'r.r.r.r.o.r.r.f.', kick: 'x...x...x...x...', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.' },
+  { // Ice Island — twinkling bells, F major
+    bpm: 96, root: 77, scale: [0, 2, 4, 7, 9], wave: 'sine', dec: .9, bell: true, pad: true, chords: [0, 5, 9, 7],
+    mel: ['0.2.4.7.9.7.4.2.0...............4.5.7.9.5.7.9...7.5.4.2.0.......', '9.7.5.4.2.4.5.7.4...............2.4.5.7.4.5.7...5.4.2.0.........'],
+    bass: 'r.......o.......', kick: 'x.......x.......', snare: '................', hat: '..x...x...x...x.' },
+];
+const MUS = { step: 0, next: 0, timer: null, gain: null, noise: null };
+const noteFreq = m => 440 * Math.pow(2, (m - 69) / 12);
+function musicStart() {
+  if (!AC || MUS.timer) return;
+  MUS.gain = AC.createGain(); MUS.gain.gain.value = 0; MUS.gain.connect(AC.destination);
+  const buf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; MUS.noise = buf;
+  MUS.next = AC.currentTime + 0.1; MUS.step = 0; MUS.timer = setInterval(musicTick, 40);
+}
+function musicTick() {
+  if (!AC) return;
+  const target = S.music ? ((paused || userPaused) ? 0.1 : 0.32) : 0; MUS.gain.gain.setTargetAtTime(target, AC.currentTime, 0.4);
+  if (!S.music && MUS.gain.gain.value < 0.002) { MUS.next = Math.max(MUS.next, AC.currentTime + 0.05); return; }
+  const tr = TRACKS[S.stage] || TRACKS[0], spb = 60 / tr.bpm / 4;
+  while (MUS.next < AC.currentTime + 0.2) { playStep(tr, MUS.step, MUS.next); MUS.step = (MUS.step + 1) % 128; MUS.next += spb; }
+}
+function tone(time, midi, wave, dec, vol, bell) {
+  const o = AC.createOscillator(), g = AC.createGain(); o.type = wave; o.frequency.value = noteFreq(midi);
+  g.gain.setValueAtTime(vol, time); g.gain.exponentialRampToValueAtTime(0.001, time + dec); o.connect(g); g.connect(MUS.gain); o.start(time); o.stop(time + dec + 0.05);
+  if (bell) { const o2 = AC.createOscillator(), g2 = AC.createGain(); o2.frequency.value = noteFreq(midi) * 3; g2.gain.setValueAtTime(vol * 0.2, time); g2.gain.exponentialRampToValueAtTime(0.001, time + dec * 0.4); o2.connect(g2); g2.connect(MUS.gain); o2.start(time); o2.stop(time + dec); }
+}
+function hit(time, dur, vol, hp) { const s = AC.createBufferSource(); s.buffer = MUS.noise; const f = AC.createBiquadFilter(); f.type = hp ? 'highpass' : 'bandpass'; f.frequency.value = hp ? 7000 : 1800; const g = AC.createGain(); g.gain.setValueAtTime(vol, time); g.gain.exponentialRampToValueAtTime(0.001, time + dur); s.connect(f); f.connect(g); g.connect(MUS.gain); s.start(time); s.stop(time + dur + 0.05); }
+function kick(time) { const o = AC.createOscillator(), g = AC.createGain(); o.frequency.setValueAtTime(150, time); o.frequency.exponentialRampToValueAtTime(45, time + 0.12); g.gain.setValueAtTime(0.5, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.18); o.connect(g); g.connect(MUS.gain); o.start(time); o.stop(time + 0.2); }
+function playStep(tr, s, time) {
+  const bar = Math.floor(s / 16) % 4, i = s % 16, phrase = tr.mel[Math.floor(s / 64) % tr.mel.length], chord = tr.chords[bar];
+  const ch = phrase[s % 64]; if (ch >= '0' && ch <= '9') { const d = +ch; tone(time, tr.root + tr.scale[d % 5] + 12 * Math.floor(d / 5), tr.wave, tr.dec, 0.16, tr.bell); }
+  const b = tr.bass[i]; if (b !== '.') { const base = tr.root - 24 + chord; tone(time, b === 'r' ? base : b === 'f' ? base + 7 : base + 12, 'triangle', 0.3, 0.2); }
+  if (tr.pad && i === 0) [0, 7, 12].forEach(k => tone(time, tr.root - 12 + chord + k, 'sine', 60 / tr.bpm * 4, 0.05));
+  if (tr.kick[i] === 'x') kick(time); if (tr.snare[i] === 'x') hit(time, 0.12, 0.22, false); if (tr.hat[i] === 'x') hit(time, 0.04, 0.1, true);
+}
+function beep(f, dur = .12, type = 'sine', vol = .15) { if (!S.sound || !AC) return; try { const o = AC.createOscillator(), g = AC.createGain(); o.type = type; o.frequency.value = f; g.gain.value = vol; g.gain.exponentialRampToValueAtTime(.001, AC.currentTime + dur); o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime + dur); } catch (e) {} }
+const sfx = { coin: () => { beep(880, .1); setTimeout(() => beep(1320, .15), 70); }, pick: () => beep(520, .08, 'triangle'), drop: () => beep(330, .1, 'triangle'), buy: () => { beep(660, .1); setTimeout(() => beep(990, .12), 80); setTimeout(() => beep(1320, .18), 160); }, sad: () => beep(220, .25, 'sawtooth', .06), level: () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, .25), i * 110)), gold: () => [1047, 1319, 1568].forEach((f, i) => setTimeout(() => beep(f, .2), i * 70)), horn: () => beep(196, .5, 'square', .05) };
+
+/* ---------- helpers ---------- */
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+function moveToward(o, tx, ty, sp, dt) { const dx = tx - o.x, dy = ty - o.y, d = Math.hypot(dx, dy); if (d < 2) { o.x = tx; o.y = ty; return true; } const s = Math.min(d, sp * dt); o.x += dx / d * s; o.y += dy / d * s; if (dx) o.dir = dx > 0 ? 1 : -1; o.walk += dt * 10; return d - s < 2; }
+function float(x, y, text, color = '#2a2f3b') { particles.push({ x, y, text, t: 0, color }); }
+function levelOf() { let i = 0; for (let k = 0; k < LEVELS.length; k++) if (S.earned >= LEVELS[k][0]) i = k; return i; }
+function activeTables() { const a = tables.slice(0, S.up.table); if (S.up.viptable) a.push(tables[9]); return a; }
+function freeTableFor(vip) { const a = activeTables(); return (vip && a.find(tb => tb.vipOnly && !tb.guest)) || a.find(tb => !tb.guest && !tb.vipOnly) || null; }
+const CUST_COLORS = ['#ff8fab', '#7ad7ff', '#ffd166', '#b5e48c', '#c8a2ff', '#ffb57a'];
+const patienceFactor = () => Math.max(0.55, 1 - (S.day - 1) * 0.05) * ST().patience * (S.up.umbrella ? 1.5 : 1) * (S.up.music ? 1.25 : 1);
+
+/* ---------- missions ---------- */
+const MISSIONS = [
+  { k: 'served', txt: n => `Serve ${n} guests`, n: () => 6 + S.day * 2 },
+  { k: 'coins', txt: n => `Earn ${n} coins today`, n: () => 80 + S.day * 40 },
+  { k: 'fish', txt: n => `Catch ${n} ${ST().catchName}`, n: () => 8 + S.day * 2 },
+  { k: 'juice', txt: n => `Serve ${n} juices`, n: () => 3 + S.day, need: () => S.up.juice },
+  { k: 'ice', txt: n => `Serve ${n} ice creams`, n: () => 3 + S.day, need: () => S.up.ice },
+  { k: 'golden', txt: n => `Catch ${n} golden fish`, n: () => 1 + Math.floor(S.day / 3), need: () => S.up.rod },
+  { k: 'vip', txt: n => `Serve ${n} VIP guests`, n: () => 1 + Math.floor(S.day / 4), need: () => S.up.vip },
+  { k: 'svip', txt: n => `Serve ${n} Super VIP 💎`, n: () => 1, need: () => S.up.vip && S.day >= 3 },
+  { k: 'fancy', txt: n => `Catch ${n} fancy ${ICON.bigfish} by boat`, n: () => 2 + Math.floor(S.day / 2), need: () => S.up.boat },
+  { k: 'fast', txt: n => `Serve ${n} guests at ⚡×8 speed`, n: () => 3 + S.day },
+];
+function newMission() { const pool = MISSIONS.filter(m => !m.need || m.need()); const m = pool[Math.floor(Math.random() * pool.length)]; mission = { k: m.k, n: m.n(), txt: m.txt(m.n()), prog: 0, done: false, reward: 50 + S.day * 25 }; renderMission(); }
+function missionTick(k, amt = 1) { if (!mission || mission.done || mission.k !== k) return; mission.prog += amt; if (mission.prog >= mission.n) { mission.done = true; S.coins += mission.reward; S.earned += mission.reward; dayS.coins += mission.reward; S.stars++; S.stats.missions++; float(480, 240, `Mission done! +${mission.reward} 🪙 +1 ⭐`, '#c94a2d'); sfx.level(); } renderMission(); }
+function renderMission() { if (!mission) return; $('missionTxt').textContent = mission.done ? `✅ ${mission.txt}` : `${mission.txt}  (${Math.min(mission.prog, mission.n)}/${mission.n})`; $('mission').classList.toggle('done', mission.done); }
+
+/* ---------- game logic ---------- */
+function update(dt) {
+  if (paused || userPaused) return;
+  t += dt; dayT += dt;
+  let vx = 0, vy = 0;
+  if (keys.has('arrowleft') || keys.has('a')) vx -= 1;
+  if (keys.has('arrowright') || keys.has('d')) vx += 1;
+  if (keys.has('arrowup') || keys.has('w')) vy -= 1;
+  if (keys.has('arrowdown') || keys.has('s')) vy += 1;
+  if (joy.active) { vx = joy.dx; vy = joy.dy; }
+  if (BOAT.trip) { vx = vy = 0; clickTarget = null; }
+  if (vx || vy) { clickTarget = null; const m = Math.hypot(vx, vy); if (m > 1) { vx /= m; vy /= m; } P.x += vx * speed() * dt; P.y += vy * speed() * dt; P.walk += dt * 10; if (vx) P.dir = vx > 0 ? 1 : -1; }
+  else if (clickTarget) { if (moveToward(P, clickTarget.x, clickTarget.y, speed(), dt)) clickTarget = null; }
+  if (!BOAT.trip) {
+    P.x = Math.max(24, Math.min(936, P.x)); P.y = Math.max(70, P.y);
+    const onDock = P.x > 70 && P.x < 210, onVip = (S.up.vip && P.x > 660 && P.x < 780) || (S.up.vip2 && P.x > 380 && P.x < 500), onBp = S.up.boat && P.x > 860;
+    P.y = Math.min(onDock || onVip || onBp ? 590 : 490, P.y);
+  }
+  const still = !(vx || vy);
+
+  // fishing boat trip
+  if (S.up.boat) {
+    const B = BOAT;
+    if (!B.trip) {
+      B.x = BPIER.x; B.y = 606;
+      if (dist(P, BPIER) < 42 && still && P.items.length + boatCatch() <= cap()) { B.board += dt; if (B.board >= 0.8) { B.board = 0; B.trip = { phase: 'out', t: 0 }; sfx.horn(); float(P.x, P.y - 70, '⛵ Setting sail!', '#1f7fb8'); } } else B.board = 0;
+    } else {
+      const tr = B.trip; tr.t += dt;
+      if (tr.phase === 'out') { const k = Math.min(1, tr.t / 2.4); B.x = lerp(BPIER.x, BUOY.x, k); B.y = lerp(606, BUOY.y, k); P.dir = -1; if (k >= 1) { tr.phase = 'fish'; tr.t = 0; } }
+      else if (tr.phase === 'fish') { if (tr.t >= 3) { for (let i = 0; i < boatCatch(); i++) P.items.push('bigfish'); S.stats.fancy += boatCatch(); missionTick('fancy', boatCatch()); sfx.gold(); float(B.x, B.y - 60, ICON.bigfish + ' Fancy catch!', '#c9961a'); tr.phase = 'back'; tr.t = 0; } }
+      else { const k = Math.min(1, tr.t / 2.4); B.x = lerp(BUOY.x, BPIER.x, k); B.y = lerp(BUOY.y, 606, k); P.dir = 1; if (k >= 1) { B.trip = null; P.x = BPIER.x; P.y = BPIER.y - 20; } }
+      if (B.trip) { P.x = B.x; P.y = B.y - 14; P.walk += dt * 2; }
+    }
+  }
+
+  // fishing
+  if (dist(P, DOCK) < 70 && P.items.length < cap() && still) { P.fish += dt; if (P.fish >= fishTime()) { P.fish = 0; S.stats.fish++; missionTick('fish'); if (Math.random() < goldChance()) { P.items.push('gfish'); S.stats.golden++; missionTick('golden'); sfx.gold(); float(P.x, P.y - 70, '✨ Golden fish!', '#c9961a'); } else { P.items.push('fish'); sfx.pick(); float(P.x, P.y - 70, ICON.fish); } } }
+  else P.fish = Math.max(0, P.fish - dt * 2);
+
+  // grill
+  for (const r of GRILL.raw) r.p += dt;
+  while (GRILL.raw.length && GRILL.raw[0].p >= cookTime()) { const r = GRILL.raw.shift(); GRILL.cooked.push(r.k === 'bigfish' ? 'bigcooked' : r.k === 'gfish' ? 'gcooked' : 'cooked'); }
+  if (dist(P, GRILL) < 75) {
+    const ri = P.items.findIndex(i => i === 'fish' || i === 'gfish' || i === 'bigfish');
+    if (ri >= 0 && GRILL.raw.length < grillSlots()) { const k = P.items[ri]; P.items.splice(ri, 1); GRILL.raw.push({ p: 0, k, g: k === 'gfish' }); sfx.drop(); }
+    else if (ri < 0 && GRILL.cooked.length > 0 && P.items.length < cap()) { P.items.push(GRILL.cooked.shift()); sfx.pick(); }
+  }
+
+  // juice bar
+  if (S.up.juice) {
+    if (dist(P, CRATE) < 60 && P.items.length < cap() && still) { P.fruit += dt; if (P.fruit >= FRUIT_TIME) { P.fruit = 0; P.items.push('fruit'); sfx.pick(); } } else P.fruit = 0;
+    if (JUICE.fruit > 0) { JUICE.prog += dt; if (JUICE.prog >= JUICE_TIME) { JUICE.prog = 0; JUICE.fruit--; JUICE.ready++; } }
+    if (dist(P, JUICE) < 70) {
+      const fi = P.items.indexOf('fruit');
+      if (fi >= 0 && JUICE.fruit < 4) { P.items.splice(fi, 1); JUICE.fruit++; sfx.drop(); }
+      else if (fi < 0 && JUICE.ready > 0 && P.items.length < cap()) { JUICE.ready--; P.items.push('juice'); sfx.pick(); }
+    }
+  }
+  // ice cream cart
+  if (S.up.ice) { if (dist(P, ICE) < 60 && P.items.length < cap() && still) { P.ice += dt; if (P.ice >= ICE_TIME) { P.ice = 0; P.items.push('ice'); sfx.pick(); float(P.x, P.y - 70, '🍦'); } } else P.ice = Math.max(0, P.ice - dt * 2); }
+
+  // VIP boats (jetty 1 on the right; jetty 2, if bought, on the left)
+  for (const J of JETTIES) {
+    if (!S.up[J.key]) continue;
+    J.timer -= dt;
+    if (!J.boat && J.timer <= 0) { J.boat = { x: J.from, y: J.y, state: 'in' }; sfx.horn(); float(J.x, 520, (vipBoats + 1) % 4 === 0 ? '💎 A very special boat is coming!' : '👑 VIP boat arriving!', (vipBoats + 1) % 4 === 0 ? '#7a3fb8' : '#c9961a'); }
+    if (J.boat) {
+      if (J.boat.state === 'in') { if (moveToward(J.boat, J.x + J.side * 60, J.y, 90, dt)) {
+        const tb = freeTableFor(true);
+        if (tb || LOUNGE.queue.length < loungeSeats()) {
+          vipBoats++; const sup = vipBoats % 4 === 0 || Math.random() < 0.15; const g = makeGuest(tb || tables[0], true, sup); g.x = J.x; g.y = 560;
+          if (tb) tb.guest = g; else { g.state = 'lounge'; g.seat = LOUNGE.queue.length; LOUNGE.queue.push(g); float(J.x, 520, '🛋️ Waiting in the VIP lounge', '#c9961a'); }
+          if (sup) { sfx.level(); float(J.x, 500, '💎 SUPER VIP! Pays 10×', '#7a3fb8'); }
+        } else { float(J.x, 520, S.up.lounge ? '😔 Lounge full — VIP left!' : '😔 No free table — VIP left!', '#6c7484'); sfx.sad(); dayS.unhappy++; S.stats.unhappy++; }
+        J.boat.state = 'out'; J.timer = 45 + Math.random() * 25; } }
+      else if (J.boat.state === 'out') { if (moveToward(J.boat, J.from, J.y, 70, dt)) J.boat = null; }
+    }
+  }
+
+  // VIP lounge
+  for (const g of LOUNGE.queue) { const [sx, sy] = LOUNGE.seats[g.seat]; if (dist(g, { x: sx, y: sy }) > 2) moveToward(g, sx, sy, 140, dt); else g.patience -= dt * 0.25; }
+  while (LOUNGE.queue.length && LOUNGE.queue[0].patience <= 0) { const g = LOUNGE.queue.shift(); g.state = 'leaving'; g.sad = true; g.wasLounge = true; leavers.push(g); dayS.unhappy++; S.stats.unhappy++; sfx.sad(); LOUNGE.queue.forEach((q, i) => q.seat = i); }
+  for (let i = leavers.length - 1; i >= 0; i--) if (moveToward(leavers[i], -50, 100, 160, dt)) leavers.splice(i, 1);
+  // tables & guests
+  for (const tb of activeTables()) {
+    if (!tb.guest) {
+      if (LOUNGE.queue.length) { const g = LOUNGE.queue.shift(); LOUNGE.queue.forEach((q, i) => q.seat = i); g.state = 'arriving'; g.patience = g.maxP; tb.guest = g; continue; }
+      if (tb.vipOnly) continue;
+      tb.wait -= dt; if (tb.wait <= 0) tb.guest = makeGuest(tb, false); continue; }
+    const g = tb.guest;
+    if (g.state === 'arriving') { if (moveToward(g, tb.x, tb.y + 44, 140, dt)) g.state = 'waiting'; }
+    else if (g.state === 'waiting') {
+      g.patience -= dt;
+      if (g.patience <= 0) { g.state = 'leaving'; g.sad = true; S.stats.unhappy++; dayS.unhappy++; sfx.sad(); float(tb.x, tb.y - 10, '💨', '#6c7484'); }
+      else if (dist(P, tb) < 70) serve(tb, P);
+    }
+    else if (g.state === 'eating') { g.timer += dt; if (g.timer > 3.5) g.state = 'leaving'; }
+    else if (g.state === 'leaving') { if (moveToward(g, -50, 100, 160, dt)) { tb.guest = null; tb.wait = Math.max(0.8, (2 + Math.random() * 5 - S.day * 0.2) / (1 + S.up.ads * 0.15)); } }
+  }
+
+  // waiters
+  if (S.up.waiter) runWaiter(WAITER, ['cooked', 'gcooked', 'bigcooked'], GRILL, () => GRILL.cooked.length ? GRILL.cooked.shift() : null, dt);
+  if (S.up.waiter2) runWaiter(WAITER2, ['juice'], JUICE, () => { if (JUICE.ready > 0) { JUICE.ready--; return 'juice'; } return null; }, dt);
+
+  for (const p of particles) p.t += dt;
+  for (let i = particles.length - 1; i >= 0; i--) if (particles[i].t > 1.3) particles.splice(i, 1);
+
+  if (dayT >= DAY_LEN) endDay();
+  updateHud(); hint(!still);
+  saveTick += dt; if (saveTick > 2) { saveTick = 0; save(); }
+  if (cloudDirty && Date.now() - cloud.last > 8000) cloudPush();
+}
+let saveTick = 0, lastLevel = -1, userPaused = false;
+function setPaused(v) { if (!$('report').hidden) return; userPaused = v; $('pauseScreen').hidden = !v; $('pauseBtn').textContent = v ? '▶️' : '⏸️'; if (v) { keys.clear(); joy.active = false; joy.dx = joy.dy = 0; clickTarget = null; closeShop(); save(); cloudPush(true); } }
+$('pauseBtn').onclick = () => { initAudio(); setPaused(!userPaused); };
+$('resumeBtn').onclick = () => setPaused(false);
+addEventListener('keydown', e => { if (e.key === 'Escape' || e.key.toLowerCase() === 'p') { if (document.activeElement && document.activeElement.tagName === 'INPUT') return; setPaused(!userPaused); } });
+document.addEventListener('visibilitychange', () => { if (document.hidden && !paused) setPaused(true); });
+
+function makeGuest(tb, vip, sup = false) {
+  const opts = ['cooked']; if (S.up.juice) opts.push('juice'); if (S.up.ice) opts.push('ice');
+  const want = opts[Math.floor(Math.random() * opts.length)];
+  const maxP = (sup ? 65 : vip ? 50 : 38) * patienceFactor();
+  const HAIRS = ['#3b2a22', '#8a4a2b', '#f2c14e', '#1f1a17', '#c75b2a', '#6b4a3a'], SKINS = ['#f6c9a0', '#f1d2b0', '#d9a06c', '#b57a4a', '#8d5a3a', '#ffe0c2'], ACC = ['🎀', '🌸', '🧢', '🕶️', '🌼', '👒', null, null];
+  return { x: -40, y: 100, want, vip, sup, state: 'arriving', patience: maxP, maxP, color: sup ? '#c8a2ff' : vip ? '#ffd166' : CUST_COLORS[Math.floor(Math.random() * CUST_COLORS.length)], walk: 0, dir: 1, timer: 0,
+    hair: HAIRS[Math.floor(Math.random() * HAIRS.length)], skin: SKINS[Math.floor(Math.random() * SKINS.length)], acc: sup ? '💎' : vip ? '👑' : ACC[Math.floor(Math.random() * ACC.length)] };
+}
+
+function runWaiter(w, kinds, home, take, dt) {
+  if (!w.item) {
+    const has = home === GRILL ? GRILL.cooked.length > 0 : JUICE.ready > 0;
+    if (has) { if (moveToward(w, home.x - 60, home.y + 50, 170, dt)) { w.item = take(); w.target = null; } }
+    else moveToward(w, home.x - 90, home.y + 110, 120, dt);
+  } else {
+    const ok = tb => tb.guest && tb.guest.state === 'waiting' && (tb.guest.want === w.item || (tb.guest.want === 'cooked' && isDish(w.item)));
+    if (!w.target || !ok(w.target)) w.target = activeTables().find(ok) || null;
+    if (w.target) { if (moveToward(w, w.target.x + 50, w.target.y + 20, 170, dt)) { if (ok(w.target)) serve(w.target, w); else w.target = null; } }
+    else moveToward(w, 720, 330, 120, dt);
+  }
+}
+
+function serve(tb, who) {
+  const g = tb.guest;
+  let item = null;
+  if (who === P) { let i = P.items.indexOf(g.want); if (i < 0 && g.want === 'cooked') i = P.items.findIndex(k => k === 'bigcooked' || k === 'gcooked'); if (i < 0) return; item = P.items.splice(i, 1)[0]; }
+  else { if (!(who.item === g.want || (g.want === 'cooked' && isDish(who.item)))) return; item = who.item; who.item = null; who.target = null; }
+  // speed bonus: 8:4:2:1 units for serving within the 1st/2nd/3rd/4th quarter of the guest's patience
+  const q = Math.min(3, Math.floor((1 - g.patience / g.maxP) * 4)), bonus = speedUnit() * SPEED_MULT[q];
+  const tip = tipAmt(); let earn = Math.round((PRICE[item] * menuBoost() + tip) * ST().mult) + bonus; if (g.sup) earn *= 10; else if (g.vip) earn *= 3;
+  S.coins += earn; S.earned += earn; dayS.coins += earn; dayS.served++; S.stats.served++;
+  missionTick('served'); missionTick('coins', earn); if (item === 'juice') { S.stats.juice++; missionTick('juice'); } if (item === 'ice') { S.stats.ice++; missionTick('ice'); } if (g.vip) { S.stats.vip++; missionTick('vip'); } if (g.sup) { S.stats.svip++; missionTick('svip'); sfx.level(); for (let i = 0; i < 8; i++) particles.push({ x: tb.x + (Math.random() - .5) * 120, y: tb.y + (Math.random() - .5) * 80, text: ['💎', '✨'][i % 2], t: -Math.random() * .4, color: '#000' }); }
+  if (q === 0) { S.stats.fast++; missionTick('fast'); }
+  g.state = 'eating'; g.timer = 0; g.servedQ = q;
+  float(tb.x, tb.y - 20, '+' + earn + ' 🪙', g.vip ? '#c9961a' : '#2f8a48'); sfx.coin();
+  float(tb.x + 34, tb.y - 44, `⚡×${SPEED_MULT[q]} +${bonus}`, ['#c94a2d', '#e07a37', '#c9961a', '#6c7484'][q]);
+  if (item === 'bigcooked') float(tb.x - 34, tb.y - 44, ICON.bigcooked + ' fancy!', '#c9961a');
+  else if (item === 'gcooked') float(tb.x - 34, tb.y - 44, '🍣 wow!', '#c9961a');
+  else if (tip) float(tb.x - 34, tb.y - 44, '✨ tip', '#c9961a');
+  if (g.sup) float(tb.x, tb.y - 64, '💎 x10!', '#7a3fb8'); else if (g.vip) float(tb.x, tb.y - 64, '👑 x3', '#c9961a');
+}
+
+function endDay() {
+  paused = true; keys.clear(); joy.active = false; clickTarget = null;
+  const happy = dayS.served + dayS.unhappy ? dayS.served / (dayS.served + dayS.unhappy) : 1;
+  const target = Math.round((60 + S.day * 50) * ST().mult);
+  const before = STAGES.filter((_, i) => stageUnlocked(i)).length;
+  let stars = 1; if (dayS.coins >= target) stars++; if (happy >= 0.8 && dayS.served >= 4) stars++;
+  S.stars += stars; if (dayS.coins > S.stats.bestDay) S.stats.bestDay = dayS.coins;
+  $('repTitle').textContent = `Day ${S.day} is over!`; $('stars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+  $('repStats').innerHTML = `<div class="stat"><b>🪙 ${dayS.coins}</b><small>earned (goal ${target})</small></div><div class="stat"><b>${dayS.served}</b><small>guests served</small></div><div class="stat"><b>${Math.round(happy * 100)}%</b><small>happy guests</small></div><div class="stat"><b>${mission && mission.done ? '✅' : '❌'}</b><small>mission</small></div>`;
+  const after = STAGES.filter((_, i) => stageUnlocked(i)).length;
+  const nextSt = STAGES.find((_, i) => !stageUnlocked(i));
+  $('repNote').textContent = after > before ? `🎉 New stage unlocked: ${STAGES[after - 1].em} ${STAGES[after - 1].name}! Travel there from the Shop.` : stars === 3 ? `Perfect day!${nextSt ? ` ${nextSt.need - S.stars} more ⭐ to unlock ${nextSt.name}.` : ''}` : stars === 2 ? 'Great work! Aim for the coin goal and 80% happy guests for 3 stars.' : `Keep going! The coin goal for a day is ${target}. Upgrades in the Shop help a lot.`;
+  $('nextDay').textContent = `Open for Day ${S.day + 1} ☀️`;
+  $('report').hidden = false; sfx.level(); save(); cloudPush(true);
+}
+$('nextDay').onclick = () => { S.day++; dayT = 0; BOAT.trip = null; BOAT.board = 0; if (P.y > 500 && P.x > 860) { P.y = 480; } dayS.coins = dayS.served = dayS.unhappy = 0; tables.forEach((tb, i) => { tb.guest = null; tb.wait = 1 + i * 2.5; }); resetBoats(); newMission(); $('report').hidden = true; paused = false; save(); };
+
+function hint(moving) {
+  const g = activeTables().find(tb => tb.guest && tb.guest.state === 'waiting');
+  const has = k => P.items.includes(k);
+  let msg;
+  if (BOAT.trip) msg = BOAT.trip.phase === 'fish' ? 'Fishing for something fancy… 🎣' : BOAT.trip.phase === 'out' ? 'Sailing out to the deep water ⛵' : 'Heading back to the pier ⛵';
+  else if ((has('cooked') || has('gcooked') || has('bigcooked')) && g) msg = 'Bring the dish to a hungry guest — faster means a bigger ⚡ bonus!';
+  else if (has('bigfish')) msg = `A fancy ${ICON.bigfish}! Grill it — it pays 5× a normal dish`;
+  else if (has('juice')) msg = 'Someone would love that juice 🧃';
+  else if (has('ice')) msg = 'Deliver the ice cream before it melts 🍦';
+  else if (has('gfish')) msg = 'A golden fish! Grill it for a 🍣 that pays big';
+  else if (has('fish')) msg = 'Take the fish to the grill 🔥';
+  else if (has('fruit')) msg = 'Drop the fruit at the juice bar 🧃';
+  else if (GRILL.cooked.length) msg = 'A dish is ready at the grill — go pick it up!';
+  else if (g && g.guest.want === 'ice' && S.up.ice) msg = 'A guest wants ice cream — stand at the cart 🍦';
+  else if (g && g.guest.want === 'juice' && JUICE.ready === 0) msg = 'A guest wants juice — grab oranges from the crate 🍊';
+  else if (GRILL.raw.length) msg = 'Cooking… go catch more fish while you wait 🎣';
+  else if (S.coins >= nextCost() && nextCost() > 0) msg = 'You can afford an upgrade! Open the Shop 🛍️';
+  else if (LOUNGE.queue.length) msg = 'A VIP is waiting in the lounge — free up a table!';
+  else if (S.up.boat && Math.floor(t / 12) % 2) msg = 'Stand at the end of the right-hand pier to take the boat out ⛵';
+  else msg = 'Stand still on the dock to fish 🎣';
+  if ($('hint').textContent !== msg) $('hint').textContent = msg;
+}
+function nextCost() { const c = ITEMS.filter(i => !i.lock || !i.lock()).map(i => i.cost()).filter(c => c > 0); return c.length ? Math.min(...c) : 0; }
+
+/* ---------- shop ---------- */
+const DECOS = [
+  { key: 'd1', ic: '🦩', name: 'Flamingo', x: 150, y: 120, cost: 200 },
+  { key: 'd2', ic: '⛲', name: 'Fountain', x: 150, y: 270, cost: 400 },
+  { key: 'd3', ic: '🪷', name: 'Lily pond', x: 740, y: 390, cost: 650 },
+  { key: 'd4', ic: '🏰', name: 'Sandcastle', x: 290, y: 478, cost: 900 },
+  { key: 'd5', ic: '🗿', name: 'Stone statue', x: 150, y: 390, cost: 1300 },
+  { key: 'd6', ic: '🎡', name: 'Ferris wheel', x: 60, y: 250, cost: 2000 },
+  { key: 'd7', ic: '🐬', name: 'Dolphin show', x: 590, y: 604, cost: 3000 },
+  { key: 'd8', ic: '🎆', name: 'Fireworks', x: 480, y: 108, cost: 5000 },
+];
+const ITEMS = [
+  { key: 'table', ic: '🪑', name: 'Another table', desc: () => `${S.up.table} of 9 tables`, cost: () => stageCost([0, 0, 40, 90, 150, 230, 330, 450, 600][S.up.table] || 0), buy: () => S.up.table++ },
+  { key: 'basket', ic: '🧺', name: 'Bigger basket', desc: () => `Carry ${cap()} things (level ${S.up.basket}/6)`, cost: () => S.up.basket >= 6 ? 0 : stageCost(grow(50, S.up.basket, 1.8)), buy: () => S.up.basket++ },
+  { key: 'grill', ic: '🔥', name: 'Hotter grill', desc: () => `Cooks in ${cookTime().toFixed(1)}s, ${grillSlots()} at once (level ${S.up.grill}/5)`, cost: () => S.up.grill >= 5 ? 0 : stageCost(grow(60, S.up.grill, 1.9)), buy: () => S.up.grill++ },
+  { key: 'sandals', ic: '👟', name: 'Speedy sandals', desc: () => `Run faster (level ${S.up.sandals}/5)`, cost: () => S.up.sandals >= 5 ? 0 : stageCost(grow(80, S.up.sandals, 1.8)), buy: () => S.up.sandals++ },
+  { key: 'rod', ic: '🎣', name: 'Lucky rod', desc: () => `Faster catching, ${Math.round(goldChance() * 100)}% golden 🐠 (level ${S.up.rod}/4)`, cost: () => S.up.rod >= 4 ? 0 : stageCost(grow(140, S.up.rod, 1.9)), buy: () => S.up.rod++ },
+  { key: 'juice', ic: '🧃', name: 'Drinks bar', desc: () => 'Guests start ordering drinks', cost: () => S.up.juice ? 0 : stageCost(100), buy: () => S.up.juice = 1 },
+  { key: 'umbrella', ic: '⛱️', name: 'Umbrellas', desc: () => 'Guests wait 50% longer', cost: () => S.up.umbrella ? 0 : stageCost(120), buy: () => S.up.umbrella = 1 },
+  { key: 'lights', ic: '✨', name: 'Fairy lights', desc: () => 'Every guest tips 3 extra coins', cost: () => S.up.lights ? 0 : stageCost(180), buy: () => S.up.lights = 1 },
+  { key: 'waiter', ic: '👩‍🍳', name: 'Hire Pippa the waitress', desc: () => 'Carries dishes from grill to tables', cost: () => S.up.waiter ? 0 : stageCost(250), buy: () => S.up.waiter = 1 },
+  { key: 'ice', ic: '🍦', name: 'Dessert cart', desc: () => 'A sweet new thing to sell', cost: () => S.up.ice ? 0 : stageCost(350), buy: () => S.up.ice = 1, lock: () => levelOf() < 2, lockTxt: 'Reach Seaside Cafe' },
+  { key: 'waiter2', ic: '👩‍🍳', name: 'Hire Poppy the waitress', desc: () => 'Carries drinks to tables', cost: () => S.up.waiter2 ? 0 : stageCost(400), buy: () => S.up.waiter2 = 1, lock: () => !S.up.juice || !S.up.waiter, lockTxt: 'Needs drinks bar + Pippa' },
+  { key: 'music', ic: '🎸', name: 'Live band', desc: () => 'Guests wait 25% longer', cost: () => S.up.music ? 0 : stageCost(500), buy: () => S.up.music = 1, lock: () => levelOf() < 3, lockTxt: 'Reach Marina Club' },
+  { key: 'vip', ic: '🛥️', name: 'VIP jetty', desc: () => 'A boat brings VIP guests who pay 3× 👑 — and every 4th boat, a Super VIP who pays 10× 💎', cost: () => S.up.vip ? 0 : stageCost(700), buy: () => { S.up.vip = 1; JETTIES[0].timer = 8; }, lock: () => levelOf() < 3, lockTxt: 'Reach Marina Club' },
+  { key: 'lounge', ic: '🛋️', name: 'VIP lounge', desc: () => `VIPs wait on sofas (${loungeSeats() || 2} seats) when tables are full, then get the next free table (level ${S.up.lounge}/2)`, cost: () => S.up.lounge >= 2 ? 0 : stageCost([500, 900][S.up.lounge]), buy: () => S.up.lounge++, lock: () => !S.up.vip, lockTxt: 'Needs VIP jetty' },
+  { key: 'viptable', ic: '👑', name: 'Reserved VIP table', desc: () => 'A gold-roped 10th table only VIPs may use', cost: () => S.up.viptable ? 0 : stageCost(800), buy: () => S.up.viptable = 1, lock: () => !S.up.vip, lockTxt: 'Needs VIP jetty' },
+  { key: 'vip2', ic: '🛳️', name: 'Second VIP jetty', desc: () => 'A second boat on the left brings twice as many VIPs 👑💎', cost: () => S.up.vip2 ? 0 : stageCost(1400), buy: () => { S.up.vip2 = 1; JETTIES[1].timer = 6; }, lock: () => !S.up.vip || levelOf() < 4, lockTxt: 'Needs VIP jetty + Luxury Resort' },
+  { key: 'boat', ic: '⛵', name: 'Fishing boat', desc: () => `New pier on the right. Sail out for a fancy ${ICON.bigfish} worth 5× a normal dish`, cost: () => S.up.boat ? 0 : stageCost(600), buy: () => S.up.boat = 1, lock: () => levelOf() < 2, lockTxt: 'Reach Seaside Cafe' },
+  { key: 'boat2', ic: '🪝', name: 'Deep-sea hooks', desc: () => `Boat brings back ${boatCatch()} fancy fish per trip (level ${S.up.boat2}/3)`, cost: () => S.up.boat2 >= 3 ? 0 : stageCost(grow(500, S.up.boat2, 1.8)), buy: () => S.up.boat2++, lock: () => !S.up.boat, lockTxt: 'Needs the fishing boat' },
+  { key: 'menu', ic: '📋', name: 'Fancier menu', desc: () => `Dishes pay +${S.up.menu * 10}% (level ${S.up.menu}) · never ends`, cost: () => stageCost(grow(300, S.up.menu, 1.5)), buy: () => S.up.menu++, endless: true },
+  { key: 'tipjar', ic: '🫙', name: 'Tip jar', desc: () => `+${S.up.tipjar} extra tip per guest (level ${S.up.tipjar}) · never ends`, cost: () => stageCost(grow(250, S.up.tipjar, 1.5)), buy: () => S.up.tipjar++, endless: true },
+  { key: 'ads', ic: '📣', name: 'Advertising', desc: () => `Guests arrive ${S.up.ads * 15}% faster (level ${S.up.ads}) · never ends`, cost: () => stageCost(grow(350, S.up.ads, 1.5)), buy: () => S.up.ads++, endless: true },
+  ...DECOS.map(d => ({ key: d.key, ic: d.ic, name: d.name, desc: () => `Decoration for ${ST().name}`, cost: () => S.up.deco[d.key] ? 0 : stageCost(d.cost), buy: () => S.up.deco[d.key] = 1, deco: true })),
+];
+const TROPHIES = [
+  { ic: '🐟', name: 'First catch', desc: 'Catch 1 fish', ok: () => S.stats.fish >= 1 },
+  { ic: '🍽️', name: 'Good host', desc: 'Serve 25 guests', ok: () => S.stats.served >= 25 },
+  { ic: '🏆', name: 'Super host', desc: 'Serve 200 guests', ok: () => S.stats.served >= 200 },
+  { ic: '🐠', name: 'Golden touch', desc: 'Catch 10 golden fish', ok: () => S.stats.golden >= 10 },
+  { ic: '🧃', name: 'Juice queen', desc: 'Serve 30 juices', ok: () => S.stats.juice >= 30 },
+  { ic: '🍦', name: 'Sweet tooth', desc: 'Serve 30 ice creams', ok: () => S.stats.ice >= 30 },
+  { ic: '👑', name: 'Royal welcome', desc: 'Serve 5 VIP guests', ok: () => S.stats.vip >= 5 },
+  { ic: '💎', name: 'Royal banquet', desc: 'Serve 5 Super VIPs', ok: () => S.stats.svip >= 5 },
+  { ic: '🎯', name: 'Mission master', desc: 'Complete 10 missions', ok: () => S.stats.missions >= 10 },
+  { ic: '💰', name: 'Big day', desc: 'Earn 400 coins in one day', ok: () => S.stats.bestDay >= 400 },
+  { ic: '⭐', name: 'Star collector', desc: 'Collect 30 stars', ok: () => S.stars >= 30 },
+  { ic: '🏖️', name: 'Full house', desc: 'Buy all 9 tables', ok: () => S.up.table >= 9 },
+  { ic: '🌊', name: 'Legend of the Bay', desc: 'Reach the Legend level', ok: () => levelOf() >= 5 },
+  { ic: '🛍️', name: 'Everything!', desc: 'Buy every upgrade and decoration in one stage', ok: () => S.ups.some(u => { const keep = S.up; S.up = u; const ok = ITEMS.filter(i => !i.endless).every(i => i.cost() === 0); S.up = keep; return ok; }) },
+  { ic: '📋', name: 'Big spender', desc: 'Reach level 10 on any endless upgrade', ok: () => S.ups.some(u => u.menu >= 10 || u.tipjar >= 10 || u.ads >= 10) },
+  { ic: '⚡', name: 'Lightning service', desc: 'Serve 50 guests at ⚡×8 speed', ok: () => S.stats.fast >= 50 },
+  { ic: '⛵', name: 'Captain', desc: 'Catch 20 fancy fish by boat', ok: () => S.stats.fancy >= 20 },
+  { ic: '🏔️', name: 'Explorer', desc: 'Unlock Stage 3', ok: () => stageUnlocked(2) },
+  { ic: '🧊', name: 'World tour', desc: 'Unlock all 5 stages', ok: () => stageUnlocked(4) },
+];
+function renderShop() {
+  const box = $('items'); box.innerHTML = `<p class="tiny">Upgrades belong to ${ST().em} ${ST().name}. Each new stage starts fresh, with bigger prices and bigger payouts.</p>`;
+  let seenEndless = false, seenDeco = false;
+  for (const it of ITEMS) {
+    if (it.endless && !seenEndless) { seenEndless = true; const h = document.createElement('h3'); h.textContent = 'Keep upgrading ∞'; box.appendChild(h); }
+    if (it.deco && !seenDeco) { seenDeco = true; const h = document.createElement('h3'); h.textContent = `Decorate (${DECOS.filter(x => S.up.deco[x.key]).length}/${DECOS.length})`; box.appendChild(h); }
+    const c = it.cost(), locked = it.lock && it.lock() && c > 0; const d = document.createElement('div'); d.className = 'item' + (locked ? ' locked' : '');
+    d.innerHTML = `<div class="ic">${it.ic}</div><div><b>${it.name}</b><small>${locked ? '🔒 ' + it.lockTxt : it.desc()}</small></div>`;
+    const b = document.createElement('button'); b.id = 'buy-' + it.key;
+    if (c === 0) { b.textContent = 'Done ✓'; b.className = 'done'; b.disabled = true; }
+    else { b.textContent = '🪙 ' + c; b.disabled = locked || S.coins < c; b.onclick = () => { if (S.coins >= c && !(it.lock && it.lock())) { S.coins -= c; it.buy(); sfx.buy(); save(); renderShop(); float(P.x, P.y - 70, it.ic + ' ' + it.name, '#c94a2d'); } }; }
+    d.appendChild(b); box.appendChild(d);
+  }
+  const tr = $('trophies'); tr.innerHTML = `<div class="stats"><div class="stat"><b>${S.stats.served}</b><small>guests served</small></div><div class="stat"><b>${S.stats.fish}</b><small>fish caught</small></div><div class="stat"><b>🪙 ${S.stats.bestDay}</b><small>best day</small></div><div class="stat"><b>${S.day}</b><small>days open</small></div><div class="stat"><b>⚡ ${S.stats.fast}</b><small>lightning serves</small></div><div class="stat"><b>⛵ ${S.stats.fancy}</b><small>fancy fish caught</small></div><div class="stat"><b>💎 ${S.stats.svip}</b><small>Super VIPs served</small></div></div><h3>Trophies ${TROPHIES.filter(x => x.ok()).length}/${TROPHIES.length}</h3>`;
+  for (const x of TROPHIES) { const d = document.createElement('div'); d.className = 'trophy' + (x.ok() ? '' : ' off'); d.innerHTML = `<div class="ic">${x.ic}</div><div><b>${x.name}</b><small>${x.desc}</small></div>`; tr.appendChild(d); }
+  const sg = $('stages'); sg.innerHTML = `<p class="tiny">Earn ⭐ from day reports and missions to unlock new places. Prices rise at every stage, but so do the guests' expectations!</p>`;
+  STAGES.forEach((st, i) => {
+    const un = stageUnlocked(i), cur = i === S.stage; const d = document.createElement('div'); d.className = 'item' + (un ? '' : ' locked');
+    d.innerHTML = `<div class="ic">${st.em}</div><div><b>Stage ${i + 1}: ${st.name}</b><small>${un ? `Pays ${st.mult}× · ${st.icons.fish} ${st.icons.cooked} ${st.icons.juice} ${st.icons.ice}` : `🔒 Needs ${st.need} ⭐ (you have ${S.stars})`}</small></div>`;
+    const b = document.createElement('button');
+    if (cur) { b.textContent = 'Here now'; b.className = 'done'; b.disabled = true; } else { b.textContent = un ? 'Travel ✈️' : '🔒'; b.disabled = !un; b.onclick = () => goStage(i); }
+    d.appendChild(b); sg.appendChild(d);
+  });
+  $('shopCoins').textContent = `You have 🪙 ${S.coins}`;
+}
+function goStage(i) {
+  S.stage = i; S.up = S.ups[i]; MUS.step = 0; BOAT.trip = null; BOAT.board = 0; GRILL.raw = []; GRILL.cooked = []; JUICE.fruit = JUICE.ready = JUICE.prog = 0; P.items = []; WAITER.item = WAITER2.item = null; WAITER.target = WAITER2.target = null; resetBoats();
+  tables.forEach((tb, k) => { tb.guest = null; tb.wait = 1 + k * 2.5; }); P.x = 480; P.y = 330; particles.length = 0;
+  newMission(); sfx.level(); float(480, 220, `${ST().em} Welcome to ${ST().name}!`, '#c94a2d'); save(); cloudPush(true); renderShop(); closeShop();
+}
+function showTab(id) { for (const [tab, panel] of [['tabUp', 'items'], ['tabSt', 'stages'], ['tabTr', 'trophies']]) { $(panel).hidden = panel !== id; $(tab).setAttribute('aria-selected', panel === id ? 'true' : 'false'); } }
+$('tabSt').onclick = () => { renderShop(); showTab('stages'); };
+function saveCode() { try { return 'MC1.' + btoa(unescape(encodeURIComponent(JSON.stringify(plain())))); } catch (e) { return ''; } }
+function loadCode(str) {
+  try { str = (str || '').trim(); if (!str.startsWith('MC1.')) throw 0; const o = JSON.parse(decodeURIComponent(escape(atob(str.slice(4))))); if (!o || typeof o.earned !== 'number') throw 0;
+    const d = DEFAULT(); S = { ...d, ...o, stats: { ...d.stats, ...(o.stats || {}) } }; bindUp(); lastLevel = levelOf(); GRILL.raw = []; GRILL.cooked = []; P.items = []; tables.forEach((tb, i) => { tb.guest = null; tb.wait = 1 + i * 2.5; }); resetBoats(); BOAT.trip = null;
+    $('nameIn').value = S.name; save(); cloudPush(true); renderShop(); newMission(); return true; } catch (e) { return false; }
+}
+let loadArmed = false;
+$('copyCode').onclick = async () => { const v = saveCode(); $('codeOut').value = v; try { await navigator.clipboard.writeText(v); $('codeMsg').textContent = '✅ Copied! Paste it on the other device.'; } catch (e) { $('codeOut').select(); $('codeMsg').textContent = 'Select the code above and copy it.'; } };
+$('loadCode').onclick = () => { const v = $('codeIn').value.trim(); if (!v) { $('codeMsg').textContent = 'Paste a code first.'; return; } if (!loadArmed) { loadArmed = true; $('loadCode').textContent = 'Replace my club?'; $('codeMsg').textContent = 'This replaces the progress on this device. Press again to confirm.'; setTimeout(() => { loadArmed = false; $('loadCode').textContent = 'Load'; }, 4000); return; } loadArmed = false; $('loadCode').textContent = 'Load'; $('codeMsg').textContent = loadCode(v) ? '🎉 Loaded! Welcome back.' : '❌ That code didn\'t work. Check it was copied completely.'; if ($('codeMsg').textContent.startsWith('🎉')) $('codeIn').value = ''; };
+function openShop() { $('codeOut').value = saveCode(); renderShop(); $('shop').classList.add('open'); }
+function closeShop() { $('shop').classList.remove('open'); }
+$('shopBtn').onclick = () => { initAudio(); openShop(); };
+$('closeShop').onclick = closeShop;
+$('tabUp').onclick = () => showTab('items');
+$('tabTr').onclick = () => { renderShop(); showTab('trophies'); };
+$('nameIn').addEventListener('input', e => { S.name = e.target.value.trim() || 'My Marina Club'; save(); });
+let resetArmed = false;
+$('resetBtn').onclick = () => { if (!resetArmed) { resetArmed = true; $('resetBtn').textContent = 'Really start over?'; setTimeout(() => { resetArmed = false; $('resetBtn').textContent = 'Start over'; }, 3000); return; } const nm = $('nameIn').value.trim(); S = DEFAULT(); bindUp(); if (nm) S.name = nm; GRILL.raw = []; GRILL.cooked = []; JUICE.fruit = JUICE.ready = 0; P.items = []; tables.forEach((tb, i) => { tb.guest = null; tb.wait = 1 + i * 2.5; }); WAITER.item = WAITER2.item = null; resetBoats(); BOAT.trip = null; dayT = 0; dayS.coins = dayS.served = dayS.unhappy = 0; newMission(); lastLevel = 0; save(); renderShop(); $('resetBtn').textContent = 'Start over'; resetArmed = false; };
+$('muteBtn').onclick = () => { initAudio(); S.sound = !S.sound; $('muteBtn').textContent = S.sound ? '🔊' : '🔇'; save(); };
+$('musicBtn').onclick = () => { initAudio(); S.music = !S.music; $('musicBtn').style.opacity = S.music ? 1 : .45; save(); };
+
+function updateHud() {
+  const c = $('coinsN'); if (c.textContent != S.coins) c.textContent = S.coins;
+  if ($('starsN').textContent != S.stars) $('starsN').textContent = S.stars;
+  const dn = 'Day ' + S.day; if ($('day').textContent !== dn) $('day').textContent = dn;
+  $('dayfill').style.width = (dayT / DAY_LEN * 100) + '%';
+  const li = levelOf(), cur = LEVELS[li], nxt = LEVELS[li + 1];
+  const name = cur[1]; if ($('lvl').textContent !== name) $('lvl').textContent = name;
+  $('barfill').style.width = nxt ? Math.min(100, (S.earned - cur[0]) / (nxt[0] - cur[0]) * 100) + '%' : '100%';
+  if (lastLevel >= 0 && li > lastLevel) { sfx.level(); for (let i = 0; i < 14; i++) particles.push({ x: 480 + (Math.random() - .5) * 400, y: 200 + (Math.random() - .5) * 200, text: ['🎉', '⭐', '🎊'][i % 3], t: -Math.random() * .6, color: '#000' }); float(480, 180, 'Level up! ' + name, '#c94a2d'); if ($('shop').classList.contains('open')) renderShop(); }
+  lastLevel = li;
+  if ($('shop').classList.contains('open')) { $('shopCoins').textContent = `You have 🪙 ${S.coins}`; for (const it of ITEMS) { const b = $('buy-' + it.key), c = it.cost(); if (b && c) b.disabled = (it.lock && it.lock()) || S.coins < c; } }
+}
+
+/* ---------- drawing ---------- */
+function rr(x, y, w, h, r, fill, stroke) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 3; ctx.stroke(); } }
+function circ(x, y, r, fill) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = fill; ctx.fill(); }
+function emoji(s, x, y, size = 26) { ctx.font = `${size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#000'; ctx.fillText(s, x, y); }
+function label(s, x, y, size = 15, color = '#2a2f3b') { ctx.font = `700 ${size}px Fredoka, Nunito, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = color; ctx.fillText(s, x, y); }
+function ring(x, y, r, p, color) { ctx.beginPath(); ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * p); ctx.strokeStyle = color; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.stroke(); }
+
+function drawPerson(o, bodyColor, items, skin = '#f6c9a0', hat, hair) {
+  const bob = Math.sin(o.walk) * 2;
+  circ(o.x, o.y + 22, 16, 'rgba(0,0,0,.14)');
+  if (hair) { // long hair behind the head + ponytail that swings
+    circ(o.x - o.dir * 13, o.y - 10 + bob + Math.sin(o.walk) * 1.5, 7, hair);
+    rr(o.x - 15, o.y - 24 + bob, 30, 26, [15, 15, 6, 6], hair);
+    rr(o.x - 15, o.y - 8 + bob, 30, 32, [10, 10, 14, 14], bodyColor); // dress
+    ctx.beginPath(); ctx.moveTo(o.x - 15, o.y + 10 + bob); ctx.lineTo(o.x - 19, o.y + 24 + bob); ctx.lineTo(o.x + 19, o.y + 24 + bob); ctx.lineTo(o.x + 15, o.y + 10 + bob); ctx.fillStyle = bodyColor; ctx.fill();
+  } else rr(o.x - 15, o.y - 8 + bob, 30, 32, 12, bodyColor);
+  circ(o.x, o.y - 22 + bob, 15, skin);
+  if (hair) { ctx.beginPath(); ctx.arc(o.x, o.y - 24 + bob, 15.5, Math.PI * 1.05, Math.PI * 1.95); ctx.lineTo(o.x + 15.5, o.y - 24 + bob); ctx.quadraticCurveTo(o.x + 8, o.y - 30 + bob, o.x - 4, o.y - 26 + bob); ctx.quadraticCurveTo(o.x - 12, o.y - 24 + bob, o.x - 15.5, o.y - 20 + bob); ctx.closePath(); ctx.fillStyle = hair; ctx.fill(); }
+  circ(o.x + o.dir * 5, o.y - 24 + bob, 2.2, '#2a2f3b'); circ(o.x - o.dir * 3, o.y - 24 + bob, 2.2, '#2a2f3b');
+  ctx.beginPath(); ctx.arc(o.x + o.dir * 1, o.y - 18 + bob, 5, 0.15 * Math.PI, 0.85 * Math.PI); ctx.strokeStyle = '#2a2f3b'; ctx.lineWidth = 2; ctx.stroke();
+  if (hat) emoji(hat, o.x, o.y - 40 + bob, 24);
+  if (items && items.length) items.forEach((it, i) => emoji(ICON[it], o.x, o.y - 50 - i * 18 + bob, 22));
+}
+
+function drawWorld() {
+  const dusk = Math.max(0, (dayT / DAY_LEN - 0.7) / 0.3), C = ST().c, st = ST();
+  ctx.fillStyle = C.deck1; ctx.fillRect(0, 0, W, 430);
+  for (let y = 0; y < 430; y += 28) { ctx.fillStyle = y % 56 ? C.deck2 : C.deck3; ctx.fillRect(0, y, W, 14); }
+  ctx.fillStyle = C.ground; ctx.fillRect(0, 430, W, 80);
+  for (let i = 0; i < 24; i++) circ((i * 173) % W, 440 + (i * 37) % 60, 2.5, C.dots);
+  const g = ctx.createLinearGradient(0, 500, 0, H); g.addColorStop(0, C.water1); g.addColorStop(1, C.water2); ctx.fillStyle = g; ctx.fillRect(0, 500, W, 140);
+  ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 3;
+  for (let i = 0; i < 9; i++) { const x = (i * 130 + t * 25) % (W + 100) - 60, y = 520 + (i % 3) * 38 + Math.sin(t * 1.5 + i) * 4; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 15, y - 8, x + 30, y); ctx.quadraticCurveTo(x + 45, y + 8, x + 60, y); ctx.stroke(); }
+  ctx.fillStyle = C.shore; ctx.fillRect(0, 498, W, 6);
+  // docks
+  rr(70, 470, 140, 120, 6, C.dock1); rr(76, 470, 128, 112, 4, C.dock2);
+  for (let y = 480; y < 580; y += 20) { ctx.fillStyle = C.dock3; ctx.fillRect(76, y, 128, 3); }
+  emoji('🎣', 140, 596, 20);
+  for (const J of JETTIES) { if (!S.up[J.key]) continue; const L = J.x - 60; rr(L, 470, 120, 120, 6, C.dock1); rr(L + 6, 470, 108, 112, 4, C.dock2); for (let y = 480; y < 580; y += 20) { ctx.fillStyle = C.dock3; ctx.fillRect(L + 6, y, 108, 3); } rr(J.x - 30, 476, 60, 22, 6, '#ffd166'); label(J.key === 'vip' ? 'VIP' : 'VIP 2', J.x, 487, 13, '#7a4b00'); }
+  for (const J of JETTIES) if (J.boat) { ctx.save(); if (J.side < 0) { ctx.translate(J.boat.x, 0); ctx.scale(-1, 1); ctx.translate(-J.boat.x, 0); } emoji('🛥️', J.boat.x, J.boat.y, 54); ctx.restore(); }
+  if (S.up.boat) {
+    rr(860, 470, 80, 120, 6, C.dock1); rr(866, 470, 68, 112, 4, C.dock2); for (let y = 480; y < 580; y += 20) { ctx.fillStyle = C.dock3; ctx.fillRect(866, y, 68, 3); }
+    rr(870, 476, 60, 22, 6, '#7ad7ff'); label('⛵ BOAT', 900, 487, 12, '#0d3f66');
+    // buoy marking the deep-water fishing spot, and the boat itself
+    emoji('🛟', BUOY.x + 40, BUOY.y - 4 + Math.sin(t * 2) * 2, 20);
+    const B = BOAT; emoji('🚤', B.x, B.y + Math.sin(t * 2.5) * 2, 48);
+    if (!B.trip && B.board > 0) ring(P.x, P.y - 40, 22, B.board / 0.8, '#7ad7ff');
+    if (B.trip && B.trip.phase === 'fish') { ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(B.x - 20, B.y - 30); ctx.lineTo(B.x - 50, B.y + 8 + Math.sin(t * 6) * 3); ctx.stroke(); circ(B.x - 50, B.y + 8 + Math.sin(t * 6) * 3, 4, '#ff6f4e'); ring(B.x, B.y - 50, 20, Math.min(1, B.trip.t / 3), '#ffc83d'); }
+  }
+  for (let i = 0; i < 4; i++) { const x = 320 + i * 120 + Math.sin(t * .8 + i) * 40, y = 560 + (i % 2) * 40 + Math.cos(t + i) * 6; ctx.save(); ctx.globalAlpha = .7; emoji(i === 1 && S.up.rod ? '🐠' : st.swim, x, y, 20); ctx.restore(); }
+  if (!S.up.vip) { const bx = 760 + Math.sin(t * .6) * 6, by = 585 + Math.sin(t * 1.2) * 3; emoji(st.boat, bx, by, 44); } else { emoji(st.boat, 900 + Math.sin(t * .6) * 6, 612 + Math.sin(t * 1.2) * 3, 36); }
+  // sign
+  rr(300, 10, 360, 48, 14, '#fff8e8', '#fff'); label(S.name, 480, 34, 24, '#c94a2d');
+  rr(400, 58, 160, 20, [0, 0, 8, 8], '#ffd166'); label(`${st.em} Stage ${S.stage + 1} · ${st.name}`, 480, 68, 12, '#7a4b00');
+  if (S.up.lights) { for (let i = 0; i < 26; i++) { const x = 40 + i * 36, y = 70 + Math.sin(i * .9) * 6; circ(x, y, 4, ['#ffd166', '#ff8fab', '#7ad7ff', '#b5e48c'][(i + Math.floor(t * 3)) % 4]); } ctx.strokeStyle = '#8a5a2b'; ctx.lineWidth = 1.5; ctx.beginPath(); for (let i = 0; i < 26; i++) ctx.lineTo(40 + i * 36, 70 + Math.sin(i * .9) * 6); ctx.stroke(); }
+  emoji(st.deco[0], 40, 40, 44); emoji(st.deco[1], 920, 40, 44); emoji(st.deco[2], 740, 420, 26); emoji(st.deco[3], 60, 470, 18);
+  for (const d of DECOS) {
+    if (!S.up.deco[d.key]) continue;
+    if (d.key === 'd7') { emoji('🐬', d.x + Math.sin(t * 1.2) * 40, d.y - Math.abs(Math.sin(t * 2.4)) * 40, 36); continue; }
+    if (d.key === 'd8') { if (dusk > 0) for (let k = 0; k < 3; k++) emoji(['🎆', '🎇', '✨'][k], d.x - 120 + k * 120, d.y - 10 + Math.sin(t * 3 + k) * 8, 36 + Math.sin(t * 5 + k) * 6); else emoji('🎆', d.x, d.y, 24); continue; }
+    if (d.key === 'd2') circ(d.x, d.y + 10, 26, 'rgba(255,255,255,.5)');
+    if (d.key === 'd3') circ(d.x, d.y + 6, 30, 'rgba(120,200,220,.5)');
+    emoji(d.ic, d.x, d.y + (d.key === 'd6' ? Math.sin(t) * 2 : 0), d.key === 'd6' ? 56 : 40);
+  }
+  if (S.up.music) { rr(690, 100, 110, 60, 12, '#ff8fab', '#e06a8a'); emoji('🎸', 715, 128, 28); emoji('🥁', 760, 128, 28); emoji(['🎵', '🎶'][Math.floor(t * 2) % 2], 790 + Math.sin(t * 3) * 6, 90 - (t * 20 % 30), 18); }
+  if (dusk > 0) { ctx.fillStyle = `rgba(255,120,60,${dusk * 0.18})`; ctx.fillRect(0, 0, W, H); }
+}
+
+function drawStations() {
+  circ(GRILL.x, GRILL.y + 40, 48, 'rgba(0,0,0,.08)');
+  rr(GRILL.x - 55, GRILL.y - 30, 110, 70, 14, '#4a4f5c', '#2a2f3b'); rr(GRILL.x - 48, GRILL.y - 24, 96, 40, 8, '#2a2f3b');
+  for (let i = 0; i < 5; i++) { ctx.fillStyle = '#6c7484'; ctx.fillRect(GRILL.x - 44 + i * 20, GRILL.y - 20, 4, 32); }
+  label('GRILL', GRILL.x, GRILL.y + 30, 13, '#fff8e8');
+  if (GRILL.raw.length) { emoji('🔥', GRILL.x - 30, GRILL.y - 6 + Math.sin(t * 8) * 2, 26); emoji('🔥', GRILL.x + 30, GRILL.y - 6 + Math.cos(t * 8) * 2, 26); }
+  GRILL.raw.forEach((r, i) => { emoji(r.k === 'bigfish' ? ICON.bigfish : r.g ? '🐠' : ICON.fish, GRILL.x - 30 + i * 18, GRILL.y - 46, 20); ring(GRILL.x - 30 + i * 18, GRILL.y - 46, 13, r.p / cookTime(), '#ffc83d'); });
+  GRILL.cooked.forEach((k, i) => emoji(ICON[k], GRILL.x + 70, GRILL.y - 10 - i * 14, 24));
+  if (S.up.juice) {
+    rr(JUICE.x - 55, JUICE.y - 20, 110, 60, 14, '#ff9f5b', '#e07a37'); rr(JUICE.x - 55, JUICE.y - 20, 110, 16, [14, 14, 0, 0], '#ffd166');
+    label('JUICE BAR', JUICE.x, JUICE.y + 14, 13, '#fff8e8');
+    for (let i = 0; i < JUICE.fruit; i++) emoji(ICON.fruit, JUICE.x - 36 + i * 24, JUICE.y - 38, 20);
+    if (JUICE.fruit) ring(JUICE.x, JUICE.y - 4, 16, JUICE.prog / JUICE_TIME, '#fff');
+    for (let i = 0; i < JUICE.ready; i++) emoji(ICON.juice, JUICE.x + 70, JUICE.y + 10 - i * 14, 24);
+    rr(CRATE.x - 40, CRATE.y - 20, 80, 44, 8, '#c98a4e', '#8a5a2b'); for (let i = 0; i < 6; i++) emoji(ICON.fruit, CRATE.x - 28 + (i % 3) * 28, CRATE.y - 8 + Math.floor(i / 3) * 18, 18);
+    label(ST().fruitName, CRATE.x, CRATE.y + 36, 13, '#5c3a16');
+    if (P.fruit > 0) ring(P.x, P.y - 40, 22, P.fruit / FRUIT_TIME, '#ff9f5b');
+  } else { rr(JUICE.x - 55, JUICE.y - 20, 110, 60, 14, 'rgba(255,255,255,.35)'); label('juice bar', JUICE.x, JUICE.y + 2, 13, 'rgba(90,60,20,.6)'); label('(buy in shop)', JUICE.x, JUICE.y + 20, 11, 'rgba(90,60,20,.6)'); }
+  if (S.up.ice) { rr(ICE.x - 45, ICE.y - 18, 90, 46, 12, '#fff', '#ff8fab'); rr(ICE.x - 50, ICE.y - 34, 100, 18, 8, '#ff8fab'); label('ICE CREAM', ICE.x, ICE.y - 25, 11, '#fff'); emoji(ICON.ice, ICE.x - 20, ICE.y + 4, 22); emoji(ICON.ice, ICE.x + 20, ICE.y + 4, 22); circ(ICE.x - 30, ICE.y + 34, 8, '#2a2f3b'); circ(ICE.x + 30, ICE.y + 34, 8, '#2a2f3b'); if (P.ice > 0) ring(P.x, P.y - 40, 22, P.ice / ICE_TIME, '#ff8fab'); }
+  if (S.up.lounge) { for (let i = 0; i < loungeSeats(); i++) { const [sx, sy] = LOUNGE.seats[i]; rr(sx - 22, sy + 4, 44, 22, 10, '#c8a2ff', '#9b5de5'); rr(sx - 22, sy - 8, 44, 14, 6, '#e0ccff'); } rr(LOUNGE.seats[0][0] - 10, 418, 70, 18, 8, '#ffd166'); label('VIP LOUNGE', LOUNGE.seats[0][0] + 25, 427, 10, '#7a4b00'); }
+  tables.forEach((tb, i) => {
+    const on = i < S.up.table || (tb.vipOnly && S.up.viptable);
+    if (tb.vipOnly && !on) return;
+    if (!on) { ctx.save(); ctx.globalAlpha = .18; circ(tb.x, tb.y, 34, '#fff'); ctx.restore(); return; }
+    if (tb.vipOnly) { ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 4; ctx.setLineDash([10, 8]); ctx.beginPath(); ctx.arc(tb.x, tb.y + 10, 58, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); emoji('👑', tb.x, tb.y - 62, 22); }
+    if (S.up.umbrella) { circ(tb.x, tb.y - 46, 46, ['#ff8fab', '#7ad7ff', '#ffd166'][i % 3]); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 3; for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.moveTo(tb.x, tb.y - 46); ctx.lineTo(tb.x + Math.cos(k * Math.PI / 3) * 46, tb.y - 46 + Math.sin(k * Math.PI / 3) * 46); ctx.stroke(); } ctx.fillStyle = '#8a5a2b'; ctx.fillRect(tb.x - 2, tb.y - 46, 4, 46); }
+    circ(tb.x, tb.y + 6, 36, 'rgba(0,0,0,.1)'); circ(tb.x, tb.y, 34, tb.vipOnly ? '#ffd166' : '#fff8e8'); circ(tb.x, tb.y, 28, tb.vipOnly ? '#fff3c8' : '#ffe9bf'); emoji(tb.vipOnly ? '🌹' : '🌸', tb.x, tb.y, 18);
+    circ(tb.x, tb.y + 44, 14, '#b57a3f');
+  });
+}
+
+function drawGuests() {
+  for (const g of [...LOUNGE.queue, ...leavers]) { ctx.save(); ctx.translate(g.x, g.y + 22); ctx.scale(0.78, 0.78); ctx.translate(-g.x, -(g.y + 22)); drawPerson(g, g.color, null, g.skin || '#f1d2b0', g.acc, g.hair || '#3b2a22'); ctx.restore(); if (g.sad) emoji('😢', g.x + 26, g.y - 30, 22); else emoji(['🛋️', '💤'][Math.floor(t) % 2], g.x + 26, g.y - 34, 18); }
+  for (const tb of activeTables()) {
+    const g = tb.guest; if (!g) continue;
+    // little girl: same figure drawn at 78% size, feet kept on the ground
+    if (g.sup) { ctx.save(); ctx.globalAlpha = .35 + Math.sin(t * 5) * .15; circ(g.x, g.y + 4, 34, '#c8a2ff'); ctx.restore(); emoji('✨', g.x - 26 + Math.sin(t * 3) * 4, g.y - 30, 16); emoji('✨', g.x + 26 - Math.sin(t * 3) * 4, g.y - 10, 14); }
+    ctx.save(); ctx.translate(g.x, g.y + 22); ctx.scale(0.78, 0.78); ctx.translate(-g.x, -(g.y + 22));
+    drawPerson(g, g.color, null, g.skin || '#f1d2b0', g.acc, g.hair || '#3b2a22');
+    ctx.restore();
+    if (g.state === 'waiting') {
+      const bx = g.x + 32, by = g.y - 40 + Math.sin(t * 3) * 2;
+      rr(bx - 22, by - 20, 44, 40, 12, '#fff', g.sup ? '#9b5de5' : g.vip ? '#ffd166' : '#eadfc3'); emoji(ICON[g.want], bx, by, 24); if (g.sup) label('×10', bx, by + 26, 11, '#7a3fb8');
+      const p = g.patience / g.maxP; rr(g.x - 22, g.y + 30, 44, 7, 4, '#eadfc3'); rr(g.x - 22, g.y + 30, 44 * p, 7, 4, p > .4 ? '#4fbf6b' : p > .2 ? '#ffc83d' : '#ff6f4e');
+      // service stopwatch + current speed-bonus tier
+      const used = g.maxP - g.patience, q = Math.min(3, Math.floor((1 - p) * 4)), qc = ['#c94a2d', '#e07a37', '#c9961a', '#6c7484'][q];
+      rr(g.x - 30, g.y + 40, 60, 16, 8, '#fff', qc); label(`⏱ ${used.toFixed(1)}s  ⚡×${SPEED_MULT[q]}`, g.x, g.y + 48, 10, qc);
+    } else if (g.state === 'eating') emoji(['😋', '😊'][Math.floor(t * 2) % 2], g.x + 26, g.y - 30, 22);
+    else if (g.sad) emoji('😢', g.x + 26, g.y - 30, 22);
+  }
+}
+
+function drawPlayer() {
+  if (dist(P, DOCK) < 70 && P.fish > 0) { ctx.strokeStyle = '#5c3a16'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(P.x + 10, P.y - 10); ctx.lineTo(P.x + 50, P.y - 50); ctx.stroke(); ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(P.x + 50, P.y - 50); ctx.lineTo(P.x + 60, 612 + Math.sin(t * 6) * 3); ctx.stroke(); circ(P.x + 60, 612 + Math.sin(t * 6) * 3, 5, '#ff6f4e'); ring(P.x, P.y - 40, 24, P.fish / fishTime(), '#ffc83d'); }
+  drawPerson(P, '#ff6f4e', P.items, '#f6c9a0', '👒', '#3b2a22');
+  if (S.up.waiter) drawPerson(WAITER, '#7ad7ff', WAITER.item ? [WAITER.item] : null, '#f1d2b0', '🎀', '#8a4a2b');
+  if (S.up.waiter2) drawPerson(WAITER2, '#b5e48c', WAITER2.item ? [WAITER2.item] : null, '#f1d2b0', '🌸', '#f2c14e');
+}
+
+function drawParticles() {
+  for (const p of particles) { if (p.t < 0) continue; ctx.save(); ctx.globalAlpha = Math.max(0, 1 - p.t / 1.3); const y = p.y - p.t * 40; if (/[\u{1F300}-\u{1FAFF}]/u.test(p.text) && p.text.length <= 2) emoji(p.text, p.x, y, 26); else { ctx.font = '700 20px Fredoka, Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = '#fff'; ctx.strokeText(p.text, p.x, y); ctx.fillStyle = p.color; ctx.fillText(p.text, p.x, y); } ctx.restore(); }
+}
+
+function drawJoystick() { if (!joy.active) return; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = .55; circ(joy.ox, joy.oy, 60, '#fff'); ctx.globalAlpha = .9; circ(joy.ox + joy.dx * 60, joy.oy + joy.dy * 60, 28, '#ff6f4e'); ctx.globalAlpha = 1; }
+
+function render() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = ST().c.sky; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * offX, dpr * offY);
+  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
+  drawWorld(); drawStations(); drawGuests(); drawPlayer(); drawParticles();
+  if (clickTarget) { ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(clickTarget.x, clickTarget.y, 10 + Math.sin(t * 8) * 3, 0, Math.PI * 2); ctx.stroke(); }
+  ctx.restore();
+  drawJoystick();
+}
+
+/* ---------- loop ---------- */
+let last = 0;
+function frame(now) { const dt = Math.min(0.05, (now - last) / 1000 || 0); last = now; update(dt); render(); requestAnimationFrame(frame); }
+function start(snap) {
+  load(); if (snap && snap.S) S = { ...S, ...snap.S };
+  $('nameIn').value = S.name; $('muteBtn').textContent = S.sound ? '🔊' : '🔇'; $('musicBtn').style.opacity = S.music ? 1 : .45;
+  lastLevel = levelOf(); newMission(); renderShop(); cloudBadge();
+  requestAnimationFrame(frame);
+  cloudInit();
+}
+try { if ('serviceWorker' in navigator && !/claude\.ai$/.test(location.hostname) && location.protocol === 'https:') navigator.serviceWorker.register('./sw.js').catch(() => {}); } catch (e) {}
+window.claude?.hot?.snapshot?.(() => ({ S }));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
+
+</body>
+</html>
